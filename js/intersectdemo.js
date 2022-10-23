@@ -1,0 +1,633 @@
+"use strict";
+
+// Globals
+    var canvas, context, image, data;
+
+    var gCanvasX = 0;
+    var gCanvasY = 0;
+
+    // GridSize NumCells -> CellSize
+    var gGridW;
+    var gGridH;
+
+    var gCellSizeX = 50;
+    var gCellSizeY = 50;
+
+    // CellSize and NumCells -> GridSize
+    var gNumCellsX = 11; // (gGridW-1)/gCellSizeX
+    var gNumCellsY = 11; // (gGridH-1)/gCellSizeY
+    //
+
+    var gOffsetX = 0; // Center of Grid in pixels
+    var gOffsetY = 0;
+
+// 2D Rect Collision
+// ======================================================================
+function distance_integer_penetration( r1, r2 )
+{
+    var x1 = r2.left - r1.right;
+    var x2 = r1.left - r2.right;
+    var dx = Math.max( x1, x2 );
+
+    var y1 = r2.top - r1.bot;
+    var y2 = r1.top - r2.bot;
+    var dy = Math.max( y1, y2 );
+
+    var ovr = (dx*dx + dy*dy) > 0;    // is_overlapping
+    var pd  = Math.min( dx, dy );     // maximum penetrating depth
+
+    if (r1.right <= r2.left) ovr = 0; // #1
+    if (r2.right <= r1.left) ovr = 0; // #2
+    if (r1.bot   <= r2.top ) ovr = 0; // #3
+    if (r2.bot   <= r1.top ) ovr = 0; // #4
+
+    if (dx < 0) dx = 0;
+    if (dy < 0) dy = 0;
+
+    var r = dx*dx + dy*dy;                   // clamped radius
+    var d = Math.ceil( Math.sqrt(r) ); // seperated distance
+
+    if (d > 0) return d;   // seperated
+    if (ovr  ) return pd;  // penetrating
+    return 0;              // touching
+}
+
+// Test if two rects are overlapping
+// returns zero for penetration distance
+// ======================================================================
+function distance_clamped_penetration( r1, r2 )
+{
+    var x1 = r2.left - r1.right;
+    var x2 = r1.left - r2.right;
+    var dx = Math.max( x1, x2 );
+
+    var y1 = r2.top - r1.bot;
+    var y2 = r1.top - r2.bot;
+    var dy = Math.max( y1, y2 );
+
+    if (dx < 0) dx = 0;
+    if (dy < 0) dy = 0;
+
+    var r = dx*dx + dy*dy;             // clamped radius
+    var d = Math.ceil( Math.sqrt(r) ); // seperated distance
+
+    return d;
+}
+
+function distance_overlaps( r1, r2 )
+{
+    // Trivial reject
+    if (r1.right <= r2.left) return 0; // #1
+    if (r2.right <= r1.left) return 0; // #2
+    if (r1.bot   <= r2.top ) return 0; // #3
+    if (r2.bot   <= r1.top ) return 0; // #4
+    
+    var x1 = r2.left - r1.right;
+    var x2 = r1.left - r2.right;
+    var dx = Math.max( x1, x2 );
+
+    var y1 = r2.top - r1.bot;
+    var y2 = r1.top - r2.bot;
+    var dy = Math.max( y1, y2 );
+
+    var r   = dx*dx + dy*dy; // NOTE: We can optimize the square root out since all we care about is sign of distance
+    return (r > 0);
+}
+
+
+// ______________________________________________________________________
+
+// Framebuffer
+
+    // ========================================================================
+    function draw()
+    {
+        context.putImageData( image, 0, 0 );
+    }
+
+    // ========================================================================
+    function clear()
+    {
+        context.clearRect( 0, 0, canvas.width, canvas.height );
+    }
+
+    // ========================================================================
+    function get()
+    {
+        image = context.getImageData( 0, 0, canvas.width, canvas.height );
+        data  = image.data;
+    }
+
+// Pixel
+
+    /**
+     * {Number}           x
+     * {Number}           y
+     * {Number|Array}     r
+     * {Number|Undefined} g
+     * {Number|Undefined} b
+     * {Number|Undefined} a
+     * Note:
+     *   a = 0   transparent
+     *   a = 255 opaque
+     * Example:
+     *   putpixel( 1, 2, 255, 0, 0, 255 );
+     *   putpixel( 3, 4, [255, 0, 0, 255] );
+     */
+    // ========================================================================
+    function putpixel( x, y, r,g,b,a)
+    {
+        var i = ((y * image.width) + x) * 4;
+
+        // r is array [r,g,b,a]
+        if ((typeof r === 'object') && Array.isArray( r ))
+        {
+            var t = r;
+            r = t[0];
+            g = t[1];
+            b = t[2];
+            a = t[3];
+        }
+        // else: 'number'
+
+        data[i+0] = r;
+        data[i+1] = g;
+        data[i+2] = b;
+        data[i+3] = a;
+    }
+
+    // ========================================================================
+    function addpixel( x, y, r,g,b,a)
+    {
+        var i = ((y * image.width) + x) * 4;
+
+        // r is array [r,g,b,a]
+        if ((typeof r === 'object') && Array.isArray( r ))
+        {
+            var t = r;
+            r = t[0];
+            g = t[1];
+            b = t[2];
+            a = t[3];
+        }
+        // else: 'number'
+
+        data[i+0] += r;
+        data[i+1] += g;
+        data[i+2] += b;
+        data[i+3] += a;
+    }
+
+    // ========================================================================
+    function subpixel( x, y, r,g,b,a)
+    {
+        var i = ((y * image.width) + x) * 4;
+
+        // r is array [r,g,b,a]
+        if ((typeof r === 'object') && Array.isArray( r ))
+        {
+            var t = r;
+            r = t[0];
+            g = t[1];
+            b = t[2];
+            a = t[3];
+        }
+        // else: 'number'
+
+        data[i+0] -= r;
+        data[i+1] -= g;
+        data[i+2] -= b;
+        data[i+3] -= a;
+    }
+
+    // ========================================================================
+    function mulpixel( x, y, r,g,b,a)
+    {
+        // var v = h - y; // put origin at bottom-left instead of top-left
+        var i = ((y * image.width) + x) * 4;
+
+        // r is array [r,g,b,a]
+        if ((typeof r === 'object') && Array.isArray( r ))
+        {
+            var t = r;
+            r = t[0];
+            g = t[1];
+            b = t[2];
+            a = t[3];
+        }
+        // else: 'number'
+
+        data[i+0] *= r / 255;
+        data[i+1] *= g / 255;
+        data[i+2] *= b / 255;
+        data[i+3] *= a / 255;
+    }
+
+    // ========================================================================
+    function zoompixel( x, y, op, color )
+    {
+        var i, j;
+        var u = sx-1;
+        var v = sy-1;
+
+        for( j = 0; j < v; j++ )
+        {
+            for( i = 0 ; i < u; i++ )
+            {
+                op( x*sx + i +  1, y*sy + j + 1, color ); // +1,+1 for grid border
+            }
+        }
+    }
+
+// Framebuffer Utility
+
+    // ======================================================================
+    function vline( x, color, h )
+    {
+        var y;
+
+        for( y = 0; y < h; y++ )
+            putpixel( x, y, color );
+    }
+
+    // ======================================================================
+    function hline( y, color, w )
+    {
+        var x;
+
+        for( x = 0 ; x < w; x++ )
+            putpixel( x, y, color );
+    }
+
+    // @param color [r g b a] color of grid
+    // @param w     Grid width  in pixels
+    // @param h     Grid height in pixels
+    // @param sx    cell size x in pixels
+    // @param sy    cell size y in pixels
+    // ======================================================================
+    function grid( color, gridW, gridH, cellW, cellH, colorOrigin )
+    {
+        if (gridW === undefined) console.error( "Grid Width  not defined!" );
+        if (gridH === undefined) console.error( "Grid Height not defined!" );
+        if (cellW === undefined) console.error( "Grid Cell Size not defined!" );
+        if (cellH === undefined) console.error( "Grid Cell Size not defined!" );
+
+        var u = cellW-1;
+        var v = cellH-1;
+        var x,y;
+
+        for( y = 0; y < gridH; y += cellH )
+            hline( y, color, gridW );
+
+        for( x = 0 ; x < gridW; x += cellW )
+            vline( x, color, gridH );
+
+        if( colorOrigin !== undefined )
+        {
+            hline( gOffsetY, colorOrigin, gridW ); // gridH/2
+            vline( gOffsetX, colorOrigin, gridH ); // gridW/2
+        }
+    }
+
+    // Convert x,y to cartesian cell x,y
+    // ======================================================================
+    function canvas_to_cell( x, y )
+    {
+        return { x: ((x - gOffsetX) / gCellSizeX)|0,
+                 y: ((y - gOffsetY) / gCellSizeY)|0 };
+    }
+
+    // ======================================================================
+    function cell_to_canvas( x, y )
+    {
+        return { x: x*gCellSizeX + gOffsetX,
+                 y: y*gCellSizeY + gOffsetY };
+    }
+
+// ______________________________________________________________________
+// String Utility
+
+    // ========================================================================
+    function output( text )
+    {
+        var pre = document.getElementById( 'output' );
+        pre.innerHTML = text;
+    }
+
+    // ======================================================================
+    function setCharAt( text, index, c )
+    {
+        return text.substring(0, index ) + c + text.substring( index+1 );
+    }
+
+// ______________________________________________________________________
+
+function rect2d() {}
+
+rect2d.prototype =
+{
+    // @params [ left, top, right, bottom ]
+    // ======================================================================
+    init: function( coords, fillColor, borderColor )
+    {
+        var data = [ 0, 0, 0, 0 ];
+        if ((typeof coords === 'object') && Array.isArray( coords ))
+            data = coords;
+        else
+        {
+            data[0] = coords.left;
+            data[1] = coords.top;
+            data[2] = coords.right;
+            data[3] = coords.bot;
+        }
+
+        this.left  = data[0];
+        this.top   = data[1];
+        this.right = data[2];
+        this.bot   = data[3];
+
+        this.fillColor   = fillColor;
+        this.borderColor = borderColor;
+        return this;
+    },
+
+    // ======================================================================
+    draw: function( borderWidth )
+    {
+        // Convert rect vertices to canvas coords
+        var topleft  = cell_to_canvas( this.left , this.top );
+        var botright = cell_to_canvas( this.right, this.bot );
+
+        var x = topleft.x;
+        var y = topleft.y;
+
+        var w = botright.x - x;
+        var h = botright.y - y;
+
+        var b = borderWidth;
+
+        context.lineWidth = b;
+        context.strokeStyle = this.borderColor;
+        context.strokeRect( x-b, y-b, w+b*2, h+b*2 );
+
+        context.fillStyle = this.fillColor;
+        context.fillRect( x, y, w, h );
+    },
+
+    // ======================================================================
+    getH: function()
+    {
+        var h = this.bot - this.top;
+        return h;
+
+    },
+
+    // ======================================================================
+    getW: function()
+    {
+        var w = this.right - this.left;
+        return w;
+    },
+
+    // ======================================================================
+    isPointInRect: function( x, y )
+    {
+        if( (x >= this.left && x <= this.right)
+        &&  (y >= this.top  && y <= this.bot  ))
+            return true;
+        return false;
+    },
+
+    // ======================================================================
+    moveTo: function( cell )
+    {
+        var w = this.getW();
+        var h = this.getH();
+        this.left  = cell.x;
+        this.top   = cell.y;
+
+        this.right = cell.x + w;
+        this.bot   = cell.y + h;
+    }
+}
+
+// Screen ______________________________________________________________________
+
+    // rects are in grid space, not canvas space
+    var rect0 = new rect2d().init( [ 0, 0, 0, 0 ], "", "" ); // section in canvas space
+    var rect1 = new rect2d().init( [ 0, 0, 1, 1 ], "#FFA0A0A0", "#FF0000A0" );
+    var rect2 = new rect2d().init( [ 2, 2, 5, 5 ], "#A0FFA0A0", "#008000A0" );
+
+    var giModeEdit = 0; // false = move, true = edit
+
+    var giButton = 0;  // which radio button is selected, 0 .. 4
+    var gaButton = []; // DOM buttons
+
+	var gSelection  = 0; // rect1 or rect2
+	var gIsDragging = 0;
+
+	var gTime = 0;
+
+function IntersectionScreen() {}
+
+IntersectionScreen.prototype =
+
+{
+    init: function()
+    {
+        canvas  = document.getElementById( 'canvas' );
+
+        // Convert gNumCellsX to GridSize
+        if( gNumCellsX )
+        {
+            canvas.width  = (gNumCellsX * gCellSizeX) + 1;
+            canvas.height = (gNumCellsY * gCellSizeY) + 1;
+            console.log( "Resizing canvas to %o x %o", canvas.width, canvas.height );
+        }
+
+        gGridW = canvas.width;
+        gGridH = canvas.height;
+        context = canvas.getContext( '2d' );
+        context.globalCompositeOperation = "source-over"; // should default to blend but just to be safe         
+        image   = context.createImageData( gGridW, gGridH );
+        data    = image.data;
+
+        gNumCellsX = (gGridW - 1) / gCellSizeX;
+        gNumCellsY = (gGridH - 1) / gCellSizeY;
+
+        gaButton = document.querySelectorAll( 'button' );
+
+        var bound = canvas.getBoundingClientRect();
+        gCanvasX = bound.x | 0;
+        gCanvasY = bound.y | 0;
+
+        return this;
+    },
+
+    update: function( timestamp )
+    {
+        var dT = timestamp - gTime;
+        gTime = timestamp;
+
+        clear();
+        get();
+        grid( [192,192,192,255], gGridW, gGridH, gCellSizeX, gCellSizeY ); // omit center axis [0, 0, 0, 255] );
+        draw();
+
+        rect1.draw( 1 );
+        rect2.draw( 1 );
+
+        var red0   = "</font>";
+        var red1   = "<font color='#FF0000'>";
+        var green0 = "</font>";
+        var green1 = "<font color='#008000'>";
+
+        var is_overlapping = distance_overlaps( rect1, rect2 )
+                           ? red1   + "Yes" + red0
+                           : green1 + "no"  + green0
+                           ;
+        var is_seperated   = distance_clamped_penetration( rect1, rect2 );
+        var is_penetrating = distance_integer_penetration( rect1, rect2 );
+        var is_touching    = is_penetrating == 0
+                           ? red1   + "Yes" + red0
+                           : green1 + "no"  + green0
+                           ;
+        
+        if (is_penetrating < 0)
+            is_penetrating = red1 + is_penetrating + red0;
+        else
+            is_penetrating = green1 + "no" + green0;
+
+        var text = ""
+            + "<b>Is Overlapping           :</b> " + is_overlapping + "\n"
+            + "<b>Is Touching              :</b> " + is_touching    + "\n"
+            + "<b>Distance sans penetration:</b> " + is_seperated   + "\n"
+            + "<b>Distance with penetration:</b> " + is_penetrating + "\n"
+            ;
+        output( text );
+    },
+}
+
+// Main
+var screen;
+
+// ======================================================================
+function OnAnimFrame( timestamp )
+{
+    screen.update( timestamp );
+    window.requestAnimationFrame( OnAnimFrame );
+}
+
+// ======================================================================
+function OnClickButton( evt, buttonId )
+{
+    // evt = <button id="edit1" onclick="OnClickButton( this, 2 )">(x) Edit Rect 1</button>
+    giButton = buttonId;
+    giModeEdit = buttonId >= 2;
+
+    if (giButton & 1) gSelection = rect2;
+    else              gSelection = rect1;
+
+console.info( "Selected rect %o, Edit: %o", gSelection, giModeEdit );
+    UpdateButtons();
+}
+
+// ======================================================================
+function OnDragStart( evt )
+{
+    var gx = evt.x - gCanvasX;
+    var gy = evt.y - gCanvasY;
+
+    // Convert rects from grid space to canvas space since pixel clicking is more accurate on boundaries which generate false positives
+    var topleft  = cell_to_canvas( gSelection.left , gSelection.top );
+    var botright = cell_to_canvas( gSelection.right, gSelection.bot );
+
+    rect0.left  = topleft .x  ; rect0.top = topleft .y  ;
+    rect0.right = botright.x-1; rect0.bot = botright.y-1;
+
+    var cell = canvas_to_cell( gx, gy );
+    if (cell.x > gNumCellsX) cell.x = gNumCellsX;
+    if (cell.y > gNumCellsY) cell.y = gNumCellsY;
+
+    if (rect0.isPointInRect( gx, gy ) )
+    {
+        gIsDragging = true;
+    }
+}
+
+// ======================================================================
+function OnDragMove( evt )
+{
+    if( gIsDragging )
+        UpdateSelectedPosition( evt );
+}
+
+// ======================================================================
+function OnDragStop( evt )
+{
+    if( gIsDragging )
+        UpdateSelectedPosition( evt );
+    gIsDragging = false;
+}
+
+// ======================================================================
+function UpdateButtons()
+{
+    // Turn all radio buttons off
+        var  iButton,
+             nButton = gaButton.length;
+    for( iButton = 0; iButton < nButton; ++iButton )
+    {
+        var label = setCharAt( gaButton[ iButton ].innerText, 1, (giButton == iButton) ? 'x' : ' ' );
+        gaButton[ iButton ].innerText = label;
+    }
+}
+
+// Assumes we are in gIsDragging state
+// ======================================================================
+function UpdateSelectedPosition( evt )
+{
+    var gx = evt.x - gCanvasX;
+    var gy = evt.y - gCanvasY;
+
+    var cell = canvas_to_cell( gx, gy );
+    if (cell.x > gNumCellsX) cell.x = gNumCellsX;
+    if (cell.y > gNumCellsY) cell.y = gNumCellsY;
+
+    var w = gSelection.getW();
+    var h = gSelection.getH();
+
+    if( giModeEdit ) // Resize Rect
+    {
+        // canvas to cell returned the top left
+        // but we need the bottom right
+        cell.x++;
+        cell.y++;
+
+        // Don't allow rect to bigger then grid
+        if (cell.x <= gNumCellsX) gSelection.right = cell.x;
+        if (cell.y <= gNumCellsY) gSelection.bot   = cell.y;
+    }
+    else // Move Rect
+    {
+        // Don't allow rect to move off grid
+        if (cell.x + w >= gNumCellsX) cell.x = gNumCellsX - w;
+        if (cell.y + h >= gNumCellsY) cell.y = gNumCellsY - h;
+        gSelection.moveTo( cell );
+    }
+}
+
+// ======================================================================
+function OnLoad()
+{
+    screen = new IntersectionScreen().init(  );
+
+    OnClickButton( gaButton[0], 0 );
+
+    // Install callbacks
+    canvas.addEventListener( 'mousedown', OnDragStart );
+    canvas.addEventListener( 'mousemove', OnDragMove  );
+    canvas.addEventListener( 'mouseup'  , OnDragStop  );
+
+    OnAnimFrame( 0 );
+}

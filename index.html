@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!-- Copyleft (C) Michaelangel007 2022 -->
+<html>
+    <head>
+        <script type='text/javascript' src='js/intersectdemo.js'></script>        
+        <style>
+body, button
+{
+    font-size: 48px;
+}
+button
+{
+    font-family: monospace;
+}
+        </style>
+    </head>
+    <body onload="OnLoad();">
+    <table cellpadding='0'>
+        <tr>
+        <td valign='top'>
+            <canvas id='canvas' width='121' height='161'>
+            HTML5 Canvas not supported!
+            </canvas>
+        </td>
+        <td valign='top'>
+<button id='move1' onclick="OnClickButton( this, 0 )">( ) Move Rect 1 &nbsp;</button><br>
+<button id='move2' onclick="OnClickButton( this, 1 )">( ) Move Rect 2 &nbsp;</button><br>
+<button id='edit1' onclick="OnClickButton( this, 2 )">( ) Resize Rect 1</button><br>
+<button id='edit2' onclick="OnClickButton( this, 3 )">( ) Resize Rect 2</button><br>
+            <pre id='output'></pre>
+        <td>
+        </tr>
+    </table>
+<b>Instructions:</b> Click and Drag rectangle to move the entire rectangle or to resize bottom right.<br>
+    </body>
+</html>
