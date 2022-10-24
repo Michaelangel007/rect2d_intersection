@@ -501,7 +501,7 @@ IntersectionScreen.prototype =
         gGridW = canvas.width;
         gGridH = canvas.height;
         context = canvas.getContext( '2d' );
-        context.globalCompositeOperation = "source-over"; // should default to blend but just to be safe         
+        context.globalCompositeOperation = "source-over"; // should default to blend but just to be safe
         image   = context.createImageData( gGridW, gGridH );
         data    = image.data;
 
