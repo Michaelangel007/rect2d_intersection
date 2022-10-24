@@ -46,6 +46,31 @@ div
     var gOffsetY = 0;
 
 // 2D Rect Collision
+
+// Test if two rects are overlapping
+// true if overlapping, else false
+// ======================================================================
+function distance_overlaps( r1, r2 )
+{
+    // Trivial reject
+    if (r1.right <= r2.left) return 0; // Cases A,B x-axis
+    if (r2.right <= r1.left) return 0; // Cases I,J x-axis
+    if (r1.bot   <= r2.top ) return 0; // Cases A,B y-axis
+    if (r2.bot   <= r1.top ) return 0; // Cases I,J y-axis
+
+    var x1 = r2.left - r1.right;
+    var x2 = r1.left - r2.right;
+    var dx = Math.max( x1, x2 );
+
+    var y1 = r2.top - r1.bot;
+    var y2 = r1.top - r2.bot;
+    var dy = Math.max( y1, y2 );
+
+    var r  = dx*dx + dy*dy; // NOTE: We can optimize the square root out
+    return (r > 0);         // since all we care about is sign of distance
+}
+
+// Test if two rects are overlapping
 // ======================================================================
 function distance_integer_penetration( r1, r2 )
 {
@@ -57,18 +82,18 @@ function distance_integer_penetration( r1, r2 )
     var y2 = r1.top - r2.bot;
     var dy = Math.max( y1, y2 );
 
-    var ovr = (dx*dx + dy*dy) > 0;    // is_overlapping
-    var pd  = Math.min( dx, dy );     // maximum penetrating depth
+    var ovr = (dx*dx + dy*dy) > 0;     // is_overlapping
+    var pd  = Math.min( dx, dy );      // maximum penetrating depth
 
-    if (r1.right <= r2.left) ovr = 0; // Cases A,B x-axis
-    if (r2.right <= r1.left) ovr = 0; // Cases I,J x-axis
-    if (r1.bot   <= r2.top ) ovr = 0; // Cases A,B y-axis
-    if (r2.bot   <= r1.top ) ovr = 0; // Cases I,J y-axis
+    if (r1.right <= r2.left) ovr = 0;  // Cases A,B x-axis
+    if (r2.right <= r1.left) ovr = 0;  // Cases I,J x-axis
+    if (r1.bot   <= r2.top ) ovr = 0;  // Cases A,B y-axis
+    if (r2.bot   <= r1.top ) ovr = 0;  // Cases I,J y-axis
 
     if (dx < 0) dx = 0;
     if (dy < 0) dy = 0;
 
-    var r = dx*dx + dy*dy;                   // clamped radius
+    var r = dx*dx + dy*dy;             // clamped radius
     var d = Math.ceil( Math.sqrt(r) ); // seperated distance
 
     if (d > 0) return d;   // seperated
@@ -76,6 +101,11 @@ function distance_integer_penetration( r1, r2 )
     return 0;              // touching
 }
 
+// Test if two rects are overlapping
+// returns > 0 if separated, else >0 if penetrating
+// Left as an example to see how we can fix this function
+// See: distance_clamped_penetration()
+// ======================================================================
 function distance_unclamp_penetration( r1, r2 )
 {
     var x1 = r2.left - r1.right;
@@ -90,14 +120,14 @@ function distance_unclamp_penetration( r1, r2 )
 //    if (dx < 0) dx = 0;
 //    if (dy < 0) dy = 0;
 
-    var r = dx*dx + dy*dy;             // clamped radius
+    var r = dx*dx + dy*dy;             // unclamped radius
     var d = Math.ceil( Math.sqrt(r) ); // seperated distance
 
     return d;
 }
 
 // Test if two rects are overlapping
-// returns zero for penetration distance
+// returns > 0 if separated, else 0 if penetrating
 // ======================================================================
 function distance_clamped_penetration( r1, r2 )
 {
@@ -117,27 +147,6 @@ function distance_clamped_penetration( r1, r2 )
 
     return d;
 }
-
-function distance_overlaps( r1, r2 )
-{
-    // Trivial reject
-    if (r1.right <= r2.left) return 0; // Cases A,B x-axis
-    if (r2.right <= r1.left) return 0; // Cases I,J x-axis
-    if (r1.bot   <= r2.top ) return 0; // Cases A,B y-axis
-    if (r2.bot   <= r1.top ) return 0; // Cases I,J y-axis
-    
-    var x1 = r2.left - r1.right;
-    var x2 = r1.left - r2.right;
-    var dx = Math.max( x1, x2 );
-
-    var y1 = r2.top - r1.bot;
-    var y2 = r1.top - r2.bot;
-    var dy = Math.max( y1, y2 );
-
-    var r  = dx*dx + dy*dy; // NOTE: We can optimize the square root out since all we care about is sign of distance
-    return (r > 0);
-}
-
 
 // ______________________________________________________________________
 
@@ -526,20 +535,22 @@ IntersectionScreen.prototype =
         var green0 = "</font>";
         var green1 = "<font color='#008000'>";
 
-        var is_overlapping = distance_overlaps( rect1, rect2 )
+        var overlaps       = distance_overlaps           ( rect1, rect2 );
+        var unclamped      = distance_unclamp_penetration( rect1, rect2 );
+        var clamped        = distance_clamped_penetration( rect1, rect2 );
+        var distance       = distance_integer_penetration( rect1, rect2 );
+
+        var is_overlapping = overlaps
                            ? red1   + "Yes" + red0
                            : green1 + "no"  + green0
                            ;
-        var distance       = distance_integer_penetration( rect1, rect2 );
-        var unclamped      = distance_unclamp_penetration( rect1, rect2 );
-        var clamped        = distance_clamped_penetration( rect1, rect2 );
         var is_touching    = (distance == 0)
                            ? red1   + "Yes" + red0
                            : green1 + "no"  + green0
                            ;
-        var sans_penetrate = (distance < 0)
+        var sans_penetrate = (clamped <= 0)
                            ? red1   + "0"      + red0
-                           : green1 + distance + green0
+                           : green1 + clamped + green0
                            ;
         var only_penetrate = (distance < 0)
                            ? red1   + distance + red0
