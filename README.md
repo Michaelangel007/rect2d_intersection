@@ -156,7 +156,7 @@ We can generate that L2-R1 and L1-R2 table via this JavaScript code:
    console.log( text );
 ```
 
-The distance detween the **two closest edges** is `max((L2-R1),(L1-R2))` and thus we end up this for the x-axis:
+The distance detween the **two closest edges** is `max((L2-R1),(L1-R2))` and thus we end up with this for the x-axis:
 
 ```c
     int x1 = r2.left - r1.right; // L2 - R1
@@ -172,7 +172,7 @@ Doing the same for the y-axis:
     int dy = MAX( y1, y2 );
 ```
 
-With `dx` and `dy` we can use the Pythagos Theorem we can calculate the distance, hypotenuse length, or radius of the circle:
+With `dx` and `dy` we can use the [Pythagorean theorem](https://en.wikipedia.org/wiki/Pythagorean_theorem) we can calculate the distance or hypotenuse length: (This is also the radius of a circle):
 
 ```c
     int r = dx*dx + dy*dy;
@@ -219,7 +219,7 @@ bool is_overlapping( const Rect2d &rect1, const Rect2d &rect2 )
 
 # Separated
 
-If clone `is_overlapping()` to a new function `distance_separated()` and restore the Square Root we optimized out ...
+If we clone `is_overlapping()` to a new function `distance_separated()` and restore the square root we optimized out ...
 
 ```c
 int distance_separated( const Rect2d &rect1, const Rect2d &rect2 )
