@@ -71,37 +71,6 @@ function distance_overlaps( r1, r2 )
 }
 
 // Test if two rects are overlapping
-// ======================================================================
-function distance_integer_penetration( r1, r2 )
-{
-    var x1 = r2.left - r1.right;
-    var x2 = r1.left - r2.right;
-    var dx = Math.max( x1, x2 );
-
-    var y1 = r2.top - r1.bot;
-    var y2 = r1.top - r2.bot;
-    var dy = Math.max( y1, y2 );
-
-    var ovr = (dx*dx + dy*dy) > 0;     // is_overlapping
-    var pd  = Math.min( dx, dy );      // maximum penetrating depth
-
-    if (r1.right <= r2.left) ovr = 0;  // Cases A,B x-axis
-    if (r2.right <= r1.left) ovr = 0;  // Cases I,J x-axis
-    if (r1.bot   <= r2.top ) ovr = 0;  // Cases A,B y-axis
-    if (r2.bot   <= r1.top ) ovr = 0;  // Cases I,J y-axis
-
-    if (dx < 0) dx = 0;
-    if (dy < 0) dy = 0;
-
-    var r = dx*dx + dy*dy;             // clamped radius
-    var d = Math.ceil( Math.sqrt(r) ); // seperated distance
-
-    if (d > 0) return d;   // seperated
-    if (ovr  ) return pd;  // penetrating
-    return 0;              // touching
-}
-
-// Test if two rects are overlapping
 // returns > 0 if separated, else >0 if penetrating
 // Left as an example to see how we can fix this function
 // See: distance_clamped_penetration()
@@ -146,6 +115,37 @@ function distance_clamped_penetration( r1, r2 )
     var d = Math.ceil( Math.sqrt(r) ); // seperated distance
 
     return d;
+}
+
+// Test if two rects are overlapping
+// ======================================================================
+function distance_integer_penetration( r1, r2 )
+{
+    var x1 = r2.left - r1.right;
+    var x2 = r1.left - r2.right;
+    var dx = Math.max( x1, x2 );
+
+    var y1 = r2.top - r1.bot;
+    var y2 = r1.top - r2.bot;
+    var dy = Math.max( y1, y2 );
+
+    var ovr = (dx*dx + dy*dy) > 0;     // is_overlapping
+    var pd  = Math.min( dx, dy );      // maximum penetrating depth
+
+    if (r1.right <= r2.left) ovr = 0;  // Cases A,B x-axis
+    if (r2.right <= r1.left) ovr = 0;  // Cases I,J x-axis
+    if (r1.bot   <= r2.top ) ovr = 0;  // Cases A,B y-axis
+    if (r2.bot   <= r1.top ) ovr = 0;  // Cases I,J y-axis
+
+    if (dx < 0) dx = 0;
+    if (dy < 0) dy = 0;
+
+    var r = dx*dx + dy*dy;             // clamped radius
+    var d = Math.ceil( Math.sqrt(r) ); // seperated distance
+
+    if (d > 0) return d;   // seperated
+    if (ovr  ) return pd;  // penetrating
+    return 0;              // touching
 }
 
 // ______________________________________________________________________
