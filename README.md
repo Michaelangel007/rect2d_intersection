@@ -247,7 +247,7 @@ int distance_separated( const Rect2d &rect1, const Rect2d &rect2 )
 
 ... we immediately notice two problems:
 
-1) We need to change `return true` to a distance if the two rectangles are separated, and
+1) We need to change `return false` to a distance if the two rectangles are separated, and
 2) When the rectangles are overlapping _we have a positive distance_ instead of zero.
 
 The first is trivial to solve.  Just remove the trivial reject.
@@ -280,6 +280,109 @@ int distance_separated( const Rect2d &rect1, const Rect2d &rect2 )
 ```
 
 # Penetrating
+
+If rectangle 1 overlaps rectangle 2 how do we calculate the penetration distance? We need to calculate three things:
+
+* test for `overlapping`
+* get the *maximum* penetration depth, and
+* return the separated distance
+
+## Penetration Overlapping
+
+What if we combined our `is_overlapping()` and `distance_separated()` into a third `distance_penetration()` somehow?
+
+Let's first handle the case the two rectangles are overlapping:
+
+```c
+int distance_penetration( const Rect2d &rect1, const Rect2d &rect2 )
+{
+    int x1 = r2.left - r1.right; // L2 - R1
+    int x2 = r1.left - r2.right; // L1 - R2
+    int dx = MAX( x1, x2 );
+
+    int y1 = r2.top - r1.bot;
+    int y2 = r1.top - r2.bot;
+    int dy = MAX( y1, y2 );
+
+    bool overlapping = (dx*dx + dy*dy) > 0;
+
+    if (rect1.right <= rect2.left) overlapping = false;
+    if (rect2.right <= rect1.left) overlapping = false;
+    if (rect1.bot   <= rect2.top ) overlapping = false;
+    if (rect2.bot   <= rect1.top ) overlapping = false;
+}
+
+```
+
+* [x] test for `overlapping`
+
+### Penetration Maximum Distance
+
+If we look at the _minimum_ between dx and dy that will tell us the maximum penetration depth:
+
+```c
+    int depth = MIN( dx, dy );      // maximum penetrating depth
+```
+
+## Penetration Separation Distance
+
+We now need to clamp `dx` and `dy` to tell us the separated distance:
+
+```c
+    if (dx < 0) dx = 0;
+    if (dy < 0) dy = 0;
+
+    int r = dx*dx + dy*dy;          // clamped radius
+    int d = ceil( sqrt(r) );        // seperated distance
+}```
+
+Finally we can check the flags to tell which state we are in and return the correct distance:
+
+```c
+    if (d > 0)       return d;      // seperated
+    if (overlapping) return depth;  // penetrating
+    return 0;                       // touching
+```
+
+Putting it all together:
+
+```c
+int distance_penetration( const Rect2d &rect1, const Rect2d &rect2 )
+{
+    int x1 = r2.left - r1.right; // L2 - R1
+    int x2 = r1.left - r2.right; // L1 - R2
+    int dx = MAX( x1, x2 );
+
+    int y1 = r2.top - r1.bot;
+    int y2 = r1.top - r2.bot;
+    int dy = MAX( y1, y2 );
+
+    bool overlapping = (dx*dx + dy*dy) > 0;
+
+    if (rect1.right <= rect2.left) overlapping = false;
+    if (rect2.right <= rect1.left) overlapping = false;
+    if (rect1.bot   <= rect2.top ) overlapping = false;
+    if (rect2.bot   <= rect1.top ) overlapping = false;
+
+    int depth = MIN( dx, dy );      // maximum penetrating depth
+
+    if (dx < 0) dx = 0;
+    if (dy < 0) dy = 0;
+
+    int r = dx*dx + dy*dy;          // clamped radius
+    int d = ceil( sqrt(r) );        // seperated distance
+
+    if (d > 0)       return d;      // seperated
+    if (overlapping) return depth;  // penetrating
+    return 0;                       // touching
+}
+```
+
+# Further Reading
+
+The _Separation Axis Theorem_ is the generalization of two convex sets.
+
+* [SAT](https://en.wikipedia.org/wiki/Hyperplane_separation_theorem)
 
 
 Last updated: Monday, Oct. 24, 2022.
