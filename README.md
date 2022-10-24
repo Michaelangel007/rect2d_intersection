@@ -199,10 +199,10 @@ We end up:
 bool is_overlapping( const Rect2d &rect1, const Rect2d &rect2 )
 {
     // Trivial reject
-    if (rect1.right <= rect2.left) return true;
-    if (rect2.right <= rect1.left) return true;
-    if (rect1.bot   <= rect2.top ) return true;
-    if (rect2.bot   <= rect1.top ) return true;
+    if (rect1.right <= rect2.left) return false;
+    if (rect2.right <= rect1.left) return false;
+    if (rect1.bot   <= rect2.top ) return false;
+    if (rect2.bot   <= rect1.top ) return false;
 
     int x1 = r2.left - r1.right; // L2 - R1
     int x2 = r1.left - r2.right; // L1 - R2
@@ -225,10 +225,10 @@ If clone `is_overlapping()` to a new function `distance_separated()` and restore
 int distance_separated( const Rect2d &rect1, const Rect2d &rect2 )
 {
     // Trivial reject
-    if (rect1.right <= rect2.left) return true;
-    if (rect2.right <= rect1.left) return true;
-    if (rect1.bot   <= rect2.top ) return true;
-    if (rect2.bot   <= rect1.top ) return true;
+    if (rect1.right <= rect2.left) return false;
+    if (rect2.right <= rect1.left) return false;
+    if (rect1.bot   <= rect2.top ) return false;
+    if (rect2.bot   <= rect1.top ) return false;
 
     int x1 = r2.left - r1.right; // L2 - R1
     int x2 = r1.left - r2.right; // L1 - R2
