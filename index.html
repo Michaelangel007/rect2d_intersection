@@ -9,7 +9,7 @@ b
 }
 body, button
 {
-    font-size: 40px;
+    font-size: 35px;
 }
 button
 {
@@ -74,6 +74,26 @@ function distance_integer_penetration( r1, r2 )
     if (d > 0) return d;   // seperated
     if (ovr  ) return pd;  // penetrating
     return 0;              // touching
+}
+
+function distance_unclamp_penetration( r1, r2 )
+{
+    var x1 = r2.left - r1.right;
+    var x2 = r1.left - r2.right;
+    var dx = Math.max( x1, x2 );
+
+    var y1 = r2.top - r1.bot;
+    var y2 = r1.top - r2.bot;
+    var dy = Math.max( y1, y2 );
+
+// Intentionally commented out to demonstrate wrong answer
+//    if (dx < 0) dx = 0;
+//    if (dy < 0) dy = 0;
+
+    var r = dx*dx + dy*dy;             // clamped radius
+    var d = Math.ceil( Math.sqrt(r) ); // seperated distance
+
+    return d;
 }
 
 // Test if two rects are overlapping
@@ -510,23 +530,33 @@ IntersectionScreen.prototype =
                            ? red1   + "Yes" + red0
                            : green1 + "no"  + green0
                            ;
-        var is_seperated   = distance_clamped_penetration( rect1, rect2 );
-        var is_penetrating = distance_integer_penetration( rect1, rect2 );
-        var is_touching    = is_penetrating == 0
+        var distance       = distance_integer_penetration( rect1, rect2 );
+        var unclamped      = distance_unclamp_penetration( rect1, rect2 );
+        var clamped        = distance_clamped_penetration( rect1, rect2 );
+        var is_touching    = (distance == 0)
                            ? red1   + "Yes" + red0
                            : green1 + "no"  + green0
                            ;
-        
-        if (is_penetrating < 0)
-            is_penetrating = red1 + is_penetrating + red0;
-        else
-            is_penetrating = green1 + "no" + green0;
+        var sans_penetrate = (distance < 0)
+                           ? red1   + "0"      + red0
+                           : green1 + distance + green0
+                           ;
+        var only_penetrate = (distance < 0)
+                           ? red1   + distance + red0
+                           : green1 + "0"      + green0
+                           ;
+        var with_penetrate = (distance < 0)
+                           ? red1   + distance + red0
+                           : green1 + distance + green0
+                           ;
 
         var text = ""
             + "<b>Is Overlapping           :</b> " + is_overlapping + "\n"
             + "<b>Is Touching              :</b> " + is_touching    + "\n"
-            + "<b>Distance sans penetration:</b> " + is_seperated   + "\n"
-            + "<b>Distance with penetration:</b> " + is_penetrating + "\n"
+            + "<b>Distance not clamped     :</b> " + unclamped      + "\n"
+            + "<b>Distance sans penetration:</b> " + sans_penetrate + "\n"
+            + "<b>Distance only penetration:</b> " + only_penetrate + "\n"
+            + "<b>Distance with penetration:</b> " + with_penetrate + "\n"
             ;
         output( text );
     },
@@ -666,7 +696,7 @@ function OnLoad()
             HTML5 Canvas not supported!
             </canvas>
         </td>
-        <td valign='top'>
+        <td valign='top' style='padding-left: 16px'>
 <button id='move1' onclick="OnClickButton( this, 0 )">( ) Move Rect 1 &nbsp;</button><br>
 <button id='move2' onclick="OnClickButton( this, 1 )">( ) Move Rect 2 &nbsp;</button><br>
 <button id='edit1' onclick="OnClickButton( this, 2 )">( ) Resize Rect 1</button><br>
