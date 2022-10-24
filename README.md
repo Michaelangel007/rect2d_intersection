@@ -27,9 +27,18 @@ Second, we'll assume two things about our rectangles:
 * left <= right
 * top <= bot
 
+Third, our contact surface can be either:
+
+* a point
+* a line, or
+* a polygon
+
+We won't worry about the _type_ of contact surface only simple distances.
+
+
 # 1D
 
-Let's look at the simpler 1D case first.  Consider this example:
+Let's look at the simpler 1D case first of 2 lines (with non-zero thickness).  Consider this example:
 
 * rectangle 1, `------`, is 3 cells wide, and
 * rectangle 2, `|||||||`, is 4 wide.
@@ -210,6 +219,67 @@ bool is_overlapping( const Rect2d &rect1, const Rect2d &rect2 )
 
 # Separated
 
+If clone `is_overlapping()` to a new function `distance_separated()` and restore the Square Root we optimized out ...
+
+```c
+int distance_separated( const Rect2d &rect1, const Rect2d &rect2 )
+{
+    // Trivial reject
+    if (rect1.right <= rect2.left) return true;
+    if (rect2.right <= rect1.left) return true;
+    if (rect1.bot   <= rect2.top ) return true;
+    if (rect2.bot   <= rect1.top ) return true;
+
+    int x1 = r2.left - r1.right; // L2 - R1
+    int x2 = r1.left - r2.right; // L1 - R2
+    int dx = MAX( x1, x2 );
+
+    int y1 = r2.top - r1.bot;
+    int y2 = r1.top - r2.bot;
+    int dy = MAX( y1, y2 );
+
+    int r = dx*dx + dy*dy;
+    int d = ceil( sqrt( r ) );
+
+    return d;
+}
+```
+
+... we immediately notice two problems:
+
+1) We need to change `return true` to a distance if the two rectangles are separated, and
+2) When the rectangles are overlapping _we have a positive distance_ instead of zero.
+
+The first is trivial to solve.  Just remove the trivial reject.
+
+The second we need to understand HOW or WHY this is happening.
+
+Recall that `r` is ALWAYS >= 0 due to `dx*dx` and/or `dy*dy.
+
+We are not handling the edge case when `dx` or `dy` is negative thus we need to clamp those to zero:
+
+```c
+int distance_separated( const Rect2d &rect1, const Rect2d &rect2 )
+{
+    int x1 = r2.left - r1.right; // L2 - R1
+    int x2 = r1.left - r2.right; // L1 - R2
+    int dx = MAX( x1, x2 );
+
+    int y1 = r2.top - r1.bot;
+    int y2 = r1.top - r2.bot;
+    int dy = MAX( y1, y2 );
+
+    if (dx < 0) dx = 0;
+    if (dy < 0) dy = 0;
+
+    int r = dx*dx + dy*dy;
+    int d = ceil( sqrt( r ) );
+
+    return d;
+}
+```
+
 # Penetrating
 
 
+Last updated: Monday, Oct. 24, 2022.
