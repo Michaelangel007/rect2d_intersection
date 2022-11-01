@@ -2,6 +2,8 @@
 
 # Demo
 
+* ![Preview](pics/preview.png)
+
 Click Here --> [Demo](https://htmlpreview.github.io/?https://github.com/Michaelangel007/rect2d_intersection/blob/master/index.html) <-- Click Here
 
 # Introduction
@@ -386,4 +388,4 @@ The _Separation Axis Theorem_ is the generalization of two convex sets.
 * [SAT](https://en.wikipedia.org/wiki/Hyperplane_separation_theorem)
 
 
-Last updated: Monday, Oct. 24, 2022.
+Last updated: Tuesday, Nov. 1, 2022.
