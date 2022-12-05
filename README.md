@@ -337,7 +337,8 @@ We now need to clamp `dx` and `dy` to tell us the separated distance:
 
     int r = dx*dx + dy*dy;          // clamped radius
     int d = ceil( sqrt(r) );        // seperated distance
-}```
+}
+```
 
 Finally we can check the flags to tell which state we are in and return the correct distance:
 
