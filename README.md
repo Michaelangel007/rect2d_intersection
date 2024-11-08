@@ -43,10 +43,12 @@ We won't worry about the _type_ of contact surface only simple distances.
 
 Let's look at the simpler 1D case first of 2 lines (with non-zero thickness).  Consider this example:
 
-* rectangle 1, `------`, is 3 cells wide, and
-* rectangle 2, `|||||||`, is 4 wide.
+* rectangle 1, `---`, is 3 cells wide, and
+* rectangle 2, `||||`, is 4 cells wide.
 
 We'll examine the states as rectangle 1 (dynamic) moves right over time and rectangle 2 is stationary (static) at Left=4, Right=8. We'll designate where they overlap with `+`:
+
+For clarity we'll also zoom in 2x.
 
 ```
                           1 1 1
